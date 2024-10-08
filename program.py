@@ -11,6 +11,7 @@ class Application(tk.Frame):
         self.master.title("Лабораторная работа №4")
         self.pack()
         self.create_widgets()
+        self.transformations = []
 
     def create_widgets(self):
         button_width = 30 
@@ -52,6 +53,7 @@ class Application(tk.Frame):
         self.transformed_image = self.original_image.copy()
         self.image = ImageTk.PhotoImage(self.transformed_image)
         self.image_label.config(image=self.image)
+        self.transformations = []
     
     def affine_transform(self):
         if self.transformed_image:
@@ -59,12 +61,14 @@ class Application(tk.Frame):
             self.transformed_image = self.transformed_image.resize((self.transformed_image.width*2, self.transformed_image.height))
             self.image = ImageTk.PhotoImage(self.transformed_image)
             self.image_label.config(image=self.image)
+            self.transformations.append(("affine", self.transformed_image.size))
     
     def nonlinear_transform(self):
         if self.transformed_image:
             array = np.array(self.transformed_image)
             width, height = array.shape[1], array.shape[0]
             transformed_array = np.zeros_like(array)
+            coordinates = [] 
             for i in range(height):
                 for j in range(width):
                     if i == 0:
@@ -76,9 +80,11 @@ class Application(tk.Frame):
                     j_prime = int(y_prime)
                     if 0 <= i_prime < height and 0 <= j_prime < width:
                         transformed_array[i, j] = array[i_prime, j_prime]
+                        coordinates.append((i_prime, j_prime)) 
             self.transformed_image = Image.fromarray(transformed_array)
             self.image = ImageTk.PhotoImage(self.transformed_image)
             self.image_label.config(image=self.image)
+            self.transformations.append(("nonlinear", coordinates))
 
     def save_result(self):
         if self.transformed_image:
@@ -87,10 +93,15 @@ class Application(tk.Frame):
             self.transformed_image.save(output_filename)
 
     def restore_original(self):
-        if self.original_image:
-            self.transformed_image = self.original_image.copy()
+        if self.transformations:
+            for transformation in reversed(self.transformations):
+                if transformation[0] == "affine":
+                    width, height = transformation[1]
+                    self.transformed_image = self.transformed_image.resize((width//2, height))
+                    self.transformed_image = self.transformed_image.transpose(Image.FLIP_LEFT_RIGHT)
             self.image = ImageTk.PhotoImage(self.transformed_image)
             self.image_label.config(image=self.image)
+            self.transformations = []
 
 root = tk.Tk()
 app = Application(master=root)
